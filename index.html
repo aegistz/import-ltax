@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Import CSV File</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Teerayoot Injun | Teerayoot5056@gmail.com">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src='https://unpkg.com/@turf/turf/turf.min.js'></script>
+    <link rel="stylesheet" href="https://leaflet.github.io/Leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://leaflet.github.io/Leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    <script src="https://leaflet.github.io/Leaflet.markercluster/dist/leaflet.markercluster-src.js"></script>
+</head>
+
+<body>
+
+    <div class="container-fluid">
+        <div class="row content">
+            <div class="col-sm-3 sidenav">
+                <h4 class=" text-center"><i class="fa fa-file-text" aria-hidden="true"></i> IMPORT CSV </h4>
+                <hr>
+
+                <form id="form_query">
+                    <fieldset>
+                        <div class="form-group">
+                            <label for="exampleInputEmail1">ชื่อ</label>
+                            <input type="text" class="form-control" name="sname">
+                        </div>
+                        <div class="form-group">
+                            <label for="exampleInputEmail1">นามสกุล</label>
+                            <input type="text" class="form-control" name="lname">
+                        </div>
+                        <div class="form-group">
+                            <label for="exampleInputEmail1">ที่อยู่</label>
+                            <input type="text" class="form-control" name="address">
+                        </div>
+                        <button type="submit" class="btn btn-block btn-info">ค้นหาข้อมูล</button>
+                    </fieldset>
+                </form>
+
+                <hr>
+
+
+
+                <div class="input-group">
+                    <small> <i class="fa fa-upload" aria-hidden="true"></i>
+                        กด upload file CSV </small>
+                    <input type="file" class="form-control" name="file_csv" id="csv">
+
+
+                    <button onclick="send_data()" class="btn btn-block btn-info">บันทึกข้อมูล</button>
+                    <br>
+                    <small id="check_insert"></small>
+                </div>
+                <hr>
+            </div>
+
+            <div class="col-sm-9 map-body">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+
+
+    <footer class="container-fluid">
+        <p>Import CSV File</p>
+    </footer>
+
+
+    <script>
+        var map = L.map('map', {
+            attributionControl: false
+        }).setView([15.013713, 102.624093], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        })
+        var CartoDB_DarkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        var blue_icon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+        var red_icon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        markerClusterGroup = L.markerClusterGroup().addTo(map)
+        var json_data = []
+
+        $.ajax({
+            type: 'POST',
+            url: "http://mapedia.co.th/demo/service-csv/get_data.php",
+            dataType: "text",
+            success: function (resultData) {
+                var result = JSON.parse(resultData)
+                var points = []
+                result.forEach(e => {
+                    json_data.push(e)
+                    if (e.Location != null && e.Location != '') {
+                        var lat_lng = e.Location.split(",");
+                        var lat = Number(lat_lng[0])
+                        var lng = Number(lat_lng[1])
+                        var point = turf.point([lng, lat]);
+                        points.push(point)
+
+
+                        L.marker([lat, lng], { icon: blue_icon })
+                            .bindPopup(
+                                "<table class='table'>\
+                            <tr>\
+                                <td>ชื่อ - นามสกุล</td>\
+                                <td>"+ e.คำนำหน้า + e.ชื่อ + " " + e.นามสกุล + " </td>\
+                            </tr>\
+                            <tr>\
+                                <td>ที่อยู่</td>\
+                                <td>"+ e.ที่อยู่ + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ลักษณะอาคาร</td>\
+                                <td>"+ e.ลักษณะอาคาร + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>สถานะอยู่ในทะเบียนบ้าน/หากไม่บ้านหลังอื่นๆ</td>\
+                                <td>"+ e.สถานะอยู่ในทะเบียนบ้าน + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ชั้น</td>\
+                                <td>"+ e.ชั้น + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>กว้างXยาว</td>\
+                                <td>"+ e.กว้าง + " x " + e.ยาว + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>รวม</td>\
+                                <td>"+ e.รวม + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ที่ตั้งทรัพย์สิน</td>\
+                                <td>"+ e.ที่ตั้งทรัพย์สิน + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ประเภททรัพย์สิน</td>\
+                                <td>"+ e.ประเภททรัพย์สิน + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>อายุก่อสร้าง</td>\
+                                <td>"+ e.อายุก่อสร้าง + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>วันที่สำรวจ</td>\
+                                <td>"+ e.วันที่สำรวจ + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>รูปถ่าย</td>\
+                            </tr>\
+                        </table>\
+                        <img style='height:180px' src='"+ e.รูปถ่าย + "'>\
+                        "
+                            )
+                            .addTo(markerClusterGroup)
+                    }
+                });
+
+
+                // alert("Save Complete")
+            }
+            , error: function (resultData) {
+                console.log(resultData);
+            }
+        });
+
+        result = [];
+        var fileInput = document.getElementById("csv"),
+
+            readFile = function () {
+                var reader = new FileReader();
+                reader.onload = function () {
+                    var fixedstring = decodeURIComponent(escape(reader.result));
+                    var lines = fixedstring.toString().split("\n");
+
+                    var headers = lines[2].split("\t");
+                    for (var i = 3; i < lines.length; i++) {
+                        var obj = {};
+                        var currentline = lines[i].split("\t");
+
+                        for (var j = 0; j < headers.length; j++) {
+                            if (j == headers.length - 1) {
+                                obj['วันที่สำรวจ'] = currentline[j];
+                            } else if (j == 6) {
+                                obj['สถานะอยู่ในทะเบียนบ้าน'] = currentline[j];
+                            } else {
+                                obj[headers[j]] = currentline[j];
+                            }
+                        }
+                        result.push(obj);
+                    }
+                    console.log(result);
+
+                    var points = []
+                    result.forEach(e => {
+                        if (e.Location != null && e.Location != '') {
+                            var lat_lng = e.Location.split(",");
+                            var lat = Number(lat_lng[0])
+                            var lng = Number(lat_lng[1])
+                            var point = turf.point([lng, lat]);
+                            points.push(point)
+
+
+                            L.marker([lat, lng], { icon: red_icon })
+                                .bindPopup(
+                                    "<table class='table'>\
+                            <tr>\
+                                <td>ชื่อ - นามสกุล</td>\
+                                <td>"+ e.คำนำหน้า + e.ชื่อ + " " + e.นามสกุล + " </td>\
+                            </tr>\
+                            <tr>\
+                                <td>ที่อยู่</td>\
+                                <td>"+ e.ที่อยู่ + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ลักษณะอาคาร</td>\
+                                <td>"+ e.ลักษณะอาคาร + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>สถานะอยู่ในทะเบียนบ้าน/หากไม่บ้านหลังอื่นๆ</td>\
+                                <td>"+ e.สถานะอยู่ในทะเบียนบ้าน + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ชั้น</td>\
+                                <td>"+ e.ชั้น + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>กว้างXยาว</td>\
+                                <td>"+ e.กว้าง + " x " + e.ยาว + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>รวม</td>\
+                                <td>"+ e.รวม + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ที่ตั้งทรัพย์สิน</td>\
+                                <td>"+ e.ที่ตั้งทรัพย์สิน + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ประเภททรัพย์สิน</td>\
+                                <td>"+ e.ประเภททรัพย์สิน + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>อายุก่อสร้าง</td>\
+                                <td>"+ e.อายุก่อสร้าง + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>วันที่สำรวจ</td>\
+                                <td>"+ e.วันที่สำรวจ + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>รูปถ่าย</td>\
+                            </tr>\
+                        </table>\
+                        <img style='height:180px' src='"+ e.รูปถ่าย + "'>\
+                        "
+
+                                )
+
+
+                                .addTo(map)
+                        }
+                    });
+
+
+                    var collection = turf.featureCollection(points);
+                    var setview = L.geoJson(collection)
+                    map.fitBounds(setview.getBounds())
+
+                };
+                reader.readAsBinaryString(fileInput.files[0]);
+            };
+
+        fileInput.addEventListener('change', readFile);
+
+
+
+        function send_data() {
+            let num_insert = 0
+            for (let i = 0; i < result.length; i++) {
+                const e = result[i];
+                if (e.Location != null && e.Location != '') {
+                    var team = e.ทีมที่สำรวจ.split(' ')
+                    e.ทีมที่สำรวจ = team[1]
+                    var saveData = $.ajax({
+                        type: 'POST',
+                        url: "http://mapedia.co.th/demo/service-csv/insert_data.php",
+                        data: e,
+                        dataType: "text",
+                        success: function (resultData) {
+                            num_insert++
+                            document.getElementById('check_insert').innerHTML = '<p id="check_insert">นำข้อมูลเข้าแล้ว ' + num_insert + ' ข้อมูล</p>'
+
+                            console.log(resultData);
+                            // alert("Save Complete")
+                        }
+                        , error: function (resultData) {
+                            console.log(resultData);
+                        }
+                    });
+                }
+            }
+
+
+        }
+
+
+
+
+
+        $("#form_query").submit(function (event) {
+            event.preventDefault();
+            markerClusterGroup.clearLayers()
+            var sname = event.target.sname.value
+            var lname = event.target.lname.value
+            var address = event.target.address.value
+            var points = []
+            json_data.forEach(e => {
+                if (e.ชื่อ.match(sname) && e.นามสกุล.match(lname) && e.ที่อยู่.match(address)) {
+                    var lat_lng = e.Location.split(",");
+                    var lat = Number(lat_lng[0])
+                    var lng = Number(lat_lng[1])
+                    var point = turf.point([lng, lat]);
+                    points.push(point)
+
+                    L.marker([lat, lng], { icon: blue_icon })
+                        .bindPopup(
+                            "<table class='table'>\
+                            <tr>\
+                                <td>ชื่อ - นามสกุล</td>\
+                                <td>"+ e.คำนำหน้า + e.ชื่อ + " " + e.นามสกุล + " </td>\
+                            </tr>\
+                            <tr>\
+                                <td>ที่อยู่</td>\
+                                <td>"+ e.ที่อยู่ + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ลักษณะอาคาร</td>\
+                                <td>"+ e.ลักษณะอาคาร + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>สถานะอยู่ในทะเบียนบ้าน/หากไม่บ้านหลังอื่นๆ</td>\
+                                <td>"+ e.สถานะอยู่ในทะเบียนบ้าน + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ชั้น</td>\
+                                <td>"+ e.ชั้น + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>กว้างXยาว</td>\
+                                <td>"+ e.กว้าง + " x " + e.ยาว + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>รวม</td>\
+                                <td>"+ e.รวม + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ที่ตั้งทรัพย์สิน</td>\
+                                <td>"+ e.ที่ตั้งทรัพย์สิน + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>ประเภททรัพย์สิน</td>\
+                                <td>"+ e.ประเภททรัพย์สิน + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>อายุก่อสร้าง</td>\
+                                <td>"+ e.อายุก่อสร้าง + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>วันที่สำรวจ</td>\
+                                <td>"+ e.วันที่สำรวจ + "</td>\
+                            </tr>\
+                            <tr>\
+                                <td>รูปถ่าย</td>\
+                            </tr>\
+                        </table>\
+                        <img style='height:180px' src='"+ e.รูปถ่าย + "'>\
+                        "
+                        )
+                        .addTo(markerClusterGroup)
+                }
+            });
+            var collection = turf.featureCollection(points);
+            var setview = L.geoJson(collection)
+            map.fitBounds(setview.getBounds())
+        })
+
+
+    </script>
+</body>
+
+</html>
