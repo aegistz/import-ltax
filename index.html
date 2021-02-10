@@ -109,7 +109,7 @@
 
         $.ajax({
             type: 'POST',
-            url: "http://mapedia.co.th/demo/service-csv/get_data.php",
+            url: "https://mapedia.co.th/demo/service-csv/get_data.php",
             dataType: "text",
             success: function (resultData) {
                 var result = JSON.parse(resultData)
@@ -310,7 +310,7 @@
                     e.ทีมที่สำรวจ = team[1]
                     var saveData = $.ajax({
                         type: 'POST',
-                        url: "http://mapedia.co.th/demo/service-csv/insert_data.php",
+                        url: "https://mapedia.co.th/demo/service-csv/insert_data.php",
                         data: e,
                         dataType: "text",
                         success: function (resultData) {
